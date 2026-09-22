@@ -1,0 +1,11 @@
+target
+tcboplog/target
+tcboplog/data
+data
+.claude
+docs
+scripts
+config
+README.md
+*.log
+.DS_Store

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "https://www.eclipse.org/jetty/configure_9_3.dtd">
+<!-- Local dev only: H2 (DB2 compatibility mode) bound to the same JNDI name used on WebSphere -->
+<Configure class="org.eclipse.jetty.webapp.WebAppContext">
+  <New id="MachineRoomDS" class="org.eclipse.jetty.plus.jndi.Resource">
+    <Arg><Ref refid="wac"/></Arg>
+    <Arg>jdbc/MachineRoomDS</Arg>
+    <Arg>
+      <New class="org.h2.jdbcx.JdbcDataSource">
+        <Set name="URL">jdbc:h2:file:./target/devdb/mrlog;MODE=DB2;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE</Set>
+        <Set name="User">sa</Set>
+        <Set name="Password"></Set>
+      </New>
+    </Arg>
+  </New>
+</Configure>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    TCBOPLOG — self-contained trial build of the machine-room operation log:
+    Spring Boot 2.7 (embedded Tomcat, javax.*) + embedded H2 file database + auth bypass.
+    Reuses the WebSphere WAR (com.machineroom:machineroom-log) unchanged via a WAR overlay,
+    so both builds share the same code, API and UI.
+
+      mvn -DskipTests install            (in ../ , publishes machineroom-log to the local repo)
+      mvn -DskipTests package            (here → target/tcboplog.war, runnable with java -jar)
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.7.18</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.machineroom</groupId>
+  <artifactId>tcboplog</artifactId>
+  <version>1.0.0</version>
+  <packaging>war</packaging>
+  <name>TCBOPLOG</name>
+
+  <properties>
+    <java.version>1.8</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <core.version>1.0.0</core.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-tomcat</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- JSP support in the executable WAR -->
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-jasper</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- the shared application: classes for compiling, WAR for the overlay (JSPs, static, libs) -->
+    <dependency>
+      <groupId>com.machineroom</groupId>
+      <artifactId>machineroom-log</artifactId>
+      <version>${core.version}</version>
+      <classifier>classes</classifier>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.machineroom</groupId>
+      <artifactId>machineroom-log</artifactId>
+      <version>${core.version}</version>
+      <type>war</type>
+    </dependency>
+
+    <!-- embedded database -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>2.1.214</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>tcboplog</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <configuration>
+          <overlays>
+            <overlay>
+              <groupId>com.machineroom</groupId>
+              <artifactId>machineroom-log</artifactId>
+              <excludes>
+                <!-- deployment descriptors are for WebSphere; embedded Tomcat is configured in code -->
+                <exclude>WEB-INF/web.xml</exclude>
+                <exclude>WEB-INF/ibm-web-bnd.xml</exclude>
+              </excludes>
+            </overlay>
+          </overlays>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

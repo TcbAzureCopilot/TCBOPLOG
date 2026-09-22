@@ -1,0 +1,17 @@
+services:
+  tcboplog:
+    build: .
+    image: tcboplog:latest
+    container_name: tcboplog
+    ports:
+      - "8080:8080"
+    volumes:
+      - tcboplog-data:/data
+      # 要改設定（例如改接 AD、關掉 bypass）：取消下一行註解並放上自己的檔案
+      # - ./tcboplog/config/app.properties:/app/config/app.properties:ro
+    environment:
+      TZ: Asia/Taipei
+    restart: unless-stopped
+
+volumes:
+  tcboplog-data:

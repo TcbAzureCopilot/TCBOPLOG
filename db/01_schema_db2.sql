@@ -1,0 +1,214 @@
+-- =====================================================================
+--  機房操作日誌系統  DB2 Schema  (DB2 LUW 10.5 / 11.x ; also runs on H2 in DB2 mode)
+--
+--  Database must be created with UTF-8 code set, e.g.:
+--     CREATE DATABASE MRLOG USING CODESET UTF-8 TERRITORY TW PAGESIZE 32K
+--  Set the DataSource property  currentSchema=MRLOG  on WebSphere, or run:
+--     SET CURRENT SCHEMA MRLOG;
+--  Booleans are SMALLINT 0/1 for DB2 10.5 compatibility.
+-- =====================================================================
+
+-- ---------- 定義表 ----------
+CREATE TABLE DEF_TASK (
+  CODE            VARCHAR(16)   NOT NULL,
+  SEQ             INTEGER       NOT NULL,
+  NAME            VARCHAR(200)  NOT NULL,
+  SCHEDULE        VARCHAR(30)   NOT NULL,   -- daily|business_day|monthly_first|monthly_first_business|weekly_sunday
+  PLANNED_START   VARCHAR(5)    NOT NULL,   -- HH:mm
+  SHIFT           VARCHAR(8)    NOT NULL,   -- day|evening|night|cross
+  HAS_END         SMALLINT      NOT NULL DEFAULT 0,
+  QTY_LABEL       VARCHAR(50),
+  ENABLED         SMALLINT      NOT NULL DEFAULT 1,
+  PRIMARY KEY (CODE)
+);
+
+CREATE TABLE DEF_EQUIP (
+  DEF_ID          VARCHAR(64)   NOT NULL,
+  SEQ             INTEGER       NOT NULL,
+  NAME            VARCHAR(200)  NOT NULL,
+  ITEM_TYPE       VARCHAR(10)   NOT NULL,   -- status|dms|ims|text
+  SHIFT           VARCHAR(8)    NOT NULL,   -- day|evening|night
+  CHECK_TIME      VARCHAR(5),
+  STATUS_OPTIONS  VARCHAR(500),             -- '|' separated, for type=status
+  ENABLED         SMALLINT      NOT NULL DEFAULT 1,
+  PRIMARY KEY (DEF_ID)
+);
+
+CREATE TABLE DEF_CHECK (
+  DEF_ID          VARCHAR(64)   NOT NULL,
+  SEQ             INTEGER       NOT NULL,
+  NAME            VARCHAR(200)  NOT NULL,
+  ITEM_TYPE       VARCHAR(10)   NOT NULL,   -- general|cabinet|portal|sms|rmf
+  SHIFT           VARCHAR(8)    NOT NULL,
+  CHECK_TIME      VARCHAR(5),
+  HOLIDAY_SKIP    SMALLINT      NOT NULL DEFAULT 0,
+  ENABLED         SMALLINT      NOT NULL DEFAULT 1,
+  PRIMARY KEY (DEF_ID)
+);
+
+-- ---------- 每日日誌 ----------
+CREATE TABLE DAILY_LOG (
+  LOG_DATE            DATE          NOT NULL,
+  WEEKDAY             VARCHAR(2)    NOT NULL,
+  SOLAR_DAY           SMALLINT      NOT NULL,
+  DAY_TYPE            VARCHAR(10)   NOT NULL,          -- business|holiday|typhoon
+  DAY_TYPE_OVERRIDE   SMALLINT      NOT NULL DEFAULT 0,
+  DAY_TYPE_REASON     VARCHAR(500),
+  DAY_TYPE_CHANGED_BY VARCHAR(64),
+  BOOT_USER           VARCHAR(64),
+  BOOT_TIME           VARCHAR(5),
+  BOOT_OP_USER        VARCHAR(64),
+  BOOT_OP_TIME        TIMESTAMP,
+  BOOT_REV_USER       VARCHAR(64),
+  BOOT_REV_TIME       TIMESTAMP,
+  STATUS              VARCHAR(10)   NOT NULL,          -- draft|submitted|reviewed|approved
+  UNLOCK_REASON       VARCHAR(500),
+  VERSION_NO          INTEGER       NOT NULL DEFAULT 1,
+  APPR_OP_USER        VARCHAR(64),
+  APPR_OP_TIME        TIMESTAMP,
+  APPR_DEPUTY_USER    VARCHAR(64),
+  APPR_DEPUTY_TIME    TIMESTAMP,
+  APPR_CHIEF_USER     VARCHAR(64),
+  APPR_CHIEF_TIME     TIMESTAMP,
+  JOB_ERR_DAY         INTEGER       NOT NULL DEFAULT 0,
+  JOB_ERR_EVENING     INTEGER       NOT NULL DEFAULT 0,
+  JOB_ERR_NIGHT       INTEGER       NOT NULL DEFAULT 0,
+  CREATED_AT          TIMESTAMP     NOT NULL,
+  CREATED_BY          VARCHAR(64),
+  UPDATED_AT          TIMESTAMP     NOT NULL,
+  UPDATED_BY          VARCHAR(64),
+  PRIMARY KEY (LOG_DATE)
+);
+
+CREATE TABLE LOG_SHIFT (
+  LOG_DATE        DATE          NOT NULL,
+  SHIFT           VARCHAR(8)    NOT NULL,
+  STATUS          VARCHAR(10)   NOT NULL,              -- draft|submitted
+  SUBMIT_USER     VARCHAR(64),
+  SUBMIT_TIME     TIMESTAMP,
+  PRIMARY KEY (LOG_DATE, SHIFT)
+);
+
+CREATE TABLE LOG_TASK (
+  LOG_DATE            DATE          NOT NULL,
+  CODE                VARCHAR(16)   NOT NULL,
+  SEQ                 INTEGER       NOT NULL,
+  NAME                VARCHAR(200)  NOT NULL,
+  SCHEDULE            VARCHAR(30)   NOT NULL,
+  PLANNED_START       VARCHAR(5)    NOT NULL,
+  SHIFT               VARCHAR(8)    NOT NULL,
+  HAS_END             SMALLINT      NOT NULL DEFAULT 0,
+  QTY_LABEL           VARCHAR(50),
+  SHOULD_EXECUTE      SMALLINT      NOT NULL DEFAULT 1,
+  ASSIGNED_SHIFT      VARCHAR(8)    NOT NULL,
+  FORCED              SMALLINT      NOT NULL DEFAULT 0,
+  FORCE_REASON        VARCHAR(500),
+  FORCED_BY           VARCHAR(64),
+  HANDOVER_FROM       VARCHAR(8),
+  HANDOVER_END_SHIFT  VARCHAR(8),
+  DONE                SMALLINT      NOT NULL DEFAULT 0,
+  ABNORMAL            SMALLINT      NOT NULL DEFAULT 0,
+  START_TIME          VARCHAR(5),
+  END_TIME            VARCHAR(5),
+  QTY_VALUE           VARCHAR(20),
+  REMARK              VARCHAR(1000),
+  OP_USER             VARCHAR(64),
+  OP_TIME             TIMESTAMP,
+  OP_INTEGRATOR       SMALLINT      NOT NULL DEFAULT 0,
+  REV_USER            VARCHAR(64),
+  REV_TIME            TIMESTAMP,
+  PRIMARY KEY (LOG_DATE, CODE)
+);
+
+CREATE TABLE LOG_EQUIP (
+  LOG_DATE        DATE          NOT NULL,
+  DEF_ID          VARCHAR(64)   NOT NULL,
+  SEQ             INTEGER       NOT NULL,
+  DEF_NAME        VARCHAR(200)  NOT NULL,
+  ITEM_TYPE       VARCHAR(10)   NOT NULL,
+  SHIFT           VARCHAR(8)    NOT NULL,
+  CHECK_TIME      VARCHAR(5),
+  STATUS_VAL      VARCHAR(50),
+  STATUS_OPTIONS  VARCHAR(500),
+  COUNT_VAL       VARCHAR(20),
+  NOTIFY_VAL      VARCHAR(500),
+  ENABLED         SMALLINT      NOT NULL DEFAULT 1,
+  ENABLE_REASON   VARCHAR(500),
+  OP_USER         VARCHAR(64),
+  OP_TIME         TIMESTAMP,
+  REV_USER        VARCHAR(64),
+  REV_TIME        TIMESTAMP,
+  PRIMARY KEY (LOG_DATE, DEF_ID)
+);
+
+CREATE TABLE LOG_CHECK (
+  LOG_DATE        DATE          NOT NULL,
+  SHIFT           VARCHAR(8)    NOT NULL,
+  DEF_ID          VARCHAR(64)   NOT NULL,
+  SEQ             INTEGER       NOT NULL,
+  NAME            VARCHAR(200)  NOT NULL,
+  ITEM_TYPE       VARCHAR(10)   NOT NULL,
+  CHECK_TIME      VARCHAR(5),
+  STATUS_VAL      VARCHAR(20),
+  ENTRY_LOG       VARCHAR(20),
+  HOLIDAY_SKIP    SMALLINT      NOT NULL DEFAULT 0,
+  OP_USER         VARCHAR(64),
+  OP_TIME         TIMESTAMP,
+  REV_USER        VARCHAR(64),
+  REV_TIME        TIMESTAMP,
+  PRIMARY KEY (LOG_DATE, SHIFT, DEF_ID)
+);
+
+CREATE TABLE LOG_CHECK_VALUE (
+  LOG_DATE        DATE          NOT NULL,
+  SHIFT           VARCHAR(8)    NOT NULL,
+  DEF_ID          VARCHAR(64)   NOT NULL,
+  VAL_KEY         VARCHAR(50)   NOT NULL,   -- e.g. 網銀 / SGLGMVS / PRDA.CSA
+  VAL             VARCHAR(50),
+  PRIMARY KEY (LOG_DATE, SHIFT, DEF_ID, VAL_KEY)
+);
+
+CREATE TABLE LOG_RECORD (
+  ID              INTEGER       NOT NULL GENERATED ALWAYS AS IDENTITY,
+  LOG_DATE        DATE          NOT NULL,
+  SEQ             INTEGER       NOT NULL,
+  EVENT_TIME      VARCHAR(5),
+  TASK_CODE       VARCHAR(120),
+  DESCRIPTION     VARCHAR(2000) NOT NULL,
+  NOTIFY_SP       VARCHAR(200),
+  NOTIFY_AP       VARCHAR(200),
+  RECOVER_TIME    VARCHAR(5),
+  TICKET          VARCHAR(100),
+  OP_USER         VARCHAR(64)   NOT NULL,
+  SRC             VARCHAR(10)   NOT NULL,   -- manual|batch|joberror|check
+  SHIFT           VARCHAR(8),
+  CREATED_AT      TIMESTAMP     NOT NULL,
+  PRIMARY KEY (ID)
+);
+CREATE INDEX IX_LOG_RECORD_DATE ON LOG_RECORD (LOG_DATE, SEQ);
+
+CREATE TABLE LOG_COMMENT (
+  ID              INTEGER       NOT NULL GENERATED ALWAYS AS IDENTITY,
+  LOG_DATE        DATE          NOT NULL,
+  BY_USER         VARCHAR(64)   NOT NULL,
+  ROLE_NAME       VARCHAR(30)   NOT NULL,
+  COMMENT_TIME    TIMESTAMP     NOT NULL,
+  COMMENT_TEXT    VARCHAR(2000) NOT NULL,
+  PRIMARY KEY (ID)
+);
+CREATE INDEX IX_LOG_COMMENT_DATE ON LOG_COMMENT (LOG_DATE, COMMENT_TIME);
+
+-- ---------- 稽核軌跡 ----------
+CREATE TABLE AUDIT_LOG (
+  ID              INTEGER       NOT NULL GENERATED ALWAYS AS IDENTITY,
+  TS              TIMESTAMP     NOT NULL,
+  USER_ID         VARCHAR(64)   NOT NULL,
+  ROLE_NAME       VARCHAR(20),
+  CLIENT_IP       VARCHAR(64),
+  ACTION          VARCHAR(64)   NOT NULL,
+  LOG_DATE        DATE,
+  DETAIL          VARCHAR(2000),
+  PRIMARY KEY (ID)
+);
+CREATE INDEX IX_AUDIT_TS ON AUDIT_LOG (TS);
+CREATE INDEX IX_AUDIT_DATE ON AUDIT_LOG (LOG_DATE);

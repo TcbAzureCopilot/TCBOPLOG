@@ -1,0 +1,90 @@
+# =====================================================================
+#  機房操作日誌系統 — 外部設定檔 (app.properties)
+#
+#  搜尋順序（第一個找到的生效）：
+#    1. JVM 系統屬性  -Dmachineroom.config=/path/app.properties
+#    2. 環境變數      MACHINEROOM_CONFIG=/path/app.properties
+#    3. WAS 環境項目  java:comp/env/machineroom/config   (web.xml env-entry，可在 WAS 主控台覆寫)
+#    4. ${user.home}/machineroom/app.properties
+#    5. classpath:app.properties（僅開發預設）
+#
+#  檔案修改後 60 秒內自動重新載入（AD 群組名稱、科長/副科帳號改了不必重啟）。
+#  本檔為 Java Properties 格式：中文請以 UTF-8 儲存（載入時以 UTF-8 讀取）。
+# =====================================================================
+
+# ---------- 一般 ----------
+app.title=機房操作日誌系統
+app.org=合作金庫資訊部
+# 邏輯日切換時刻（小時，0-23）。07 表示 00:00-06:59 仍屬前一邏輯日（大夜班）。
+app.logicalDayCutoffHour=7
+# 前端輪詢秒數
+app.pollSeconds=5
+
+# ---------- 認證模式 ----------
+# ldap   : 以使用者帳密向 AD 做 LDAPS bind（正式環境）
+# dev    : 使用 dev.users 清單（帳號+密碼；開發 / SIT）
+# bypass : 完全不驗證密碼，任意帳號可登入（試用 / Demo；TCBOPLOG Docker 版預設）
+auth.mode=ldap
+# bypass 模式設定：帳號:角色1|角色2[:顯示名稱]；未列出的帳號給 bypass.defaultRoles
+bypass.users=op001:OPERATOR:王小明,op002:OPERATOR:李大華,dep001:DEPUTY:陳副科,chief001:CHIEF:林科長,admin:OPERATOR|DEPUTY|CHIEF:管理者
+bypass.defaultRoles=OPERATOR|DEPUTY|CHIEF
+# 開啟登入頁時自動以此帳號登入（留空 = 顯示登入表單；登出後可用 /login?select=1 換帳號）
+bypass.autoLogin=
+
+# ---------- AD / LDAPS ----------
+# 可填主機名或 IP；多台以逗號分隔，依序嘗試
+ldap.urls=ldaps://10.1.2.3:636,ldaps://ad2.bank.local:636
+# 使用者 bind 帳號格式：{user}@upnSuffix（UPN）或 domain\{user}
+ldap.upnSuffix=bank.local
+ldap.netbiosDomain=BANK
+# bind 格式：upn | netbios
+ldap.bindFormat=upn
+ldap.baseDn=DC=bank,DC=local
+# 選填：查詢群組用的服務帳號。留空則用登入者本身的連線查自己的 memberOf
+ldap.serviceUser=
+ldap.servicePassword=
+# 選填：自訂 truststore（含 AD 憑證鏈）。留空使用 JVM 預設 cacerts
+ldap.truststore=
+ldap.truststorePassword=
+ldap.truststoreType=JKS
+# 是否解析巢狀群組（LDAP_MATCHING_RULE_IN_CHAIN）
+ldap.nestedGroups=true
+ldap.connectTimeoutMs=5000
+ldap.readTimeoutMs=10000
+# 讀取顯示名稱的屬性
+ldap.displayNameAttr=displayName
+
+# ---------- 角色對應 ----------
+# 經辦（OP）：AD 群組。可填群組 DN 或 sAMAccountName / CN，多個以逗號分隔
+roles.operatorGroups=CN=MachineRoom-Operators,OU=Groups,DC=bank,DC=local
+# 副科：AD 帳號（sAMAccountName），逗號分隔
+roles.deputyAccounts=dep001,dep002
+# 科長：AD 帳號
+roles.chiefAccounts=chief001
+# 管理者（項目管理 / 匯入 / 手動新增日誌）：留空 = 副科 + 科長
+roles.adminAccounts=
+roles.adminGroups=
+
+# ---------- 網路限制 ----------
+# 允許的用戶端 IP / CIDR（逗號分隔）。留空 = 不限制
+security.allowedClientIps=
+# 若前方有反向代理 / IHS，是否採用 X-Forwarded-For 的第一個 IP 作為用戶端 IP
+security.trustProxyHeader=false
+
+# ---------- 資料庫 ----------
+# WAS 上的 DataSource JNDI 名稱（web.xml resource-ref 綁定）
+db.jndiName=jdbc/MachineRoomDS
+# 啟動時自動執行 schema（僅開發用；正式 DB2 請用 db/01_schema_db2.sql 手動建置）
+db.autoInit=false
+# 啟動時若定義表為空，是否載入預設項目（batch A1~A32、系統設備、三班檢查）
+db.seedDefaultsIfEmpty=true
+
+# ---------- PDF ----------
+# 中文字型檔（請用 TrueType：TTF / TTC；避免 CFF 格式 .otf，OpenPDF 子集嵌入時部分字會變形）。
+# 以分號分隔多個候選路徑，依序找到第一個存在的檔案。TTC 請加 ",0" 指定字型索引。
+pdf.fontPaths=C:/Windows/Fonts/msjh.ttc,0;/usr/share/fonts/truetype/noto/NotoSansTC-Regular.ttf;/opt/ibm/mrlog/fonts/msjh.ttc,0
+pdf.fontName=Microsoft JhengHei
+
+# ---------- 開發用假帳號（auth.mode=dev 才生效） ----------
+# 格式：帳號:密碼:角色1|角色2[:顯示名稱]
+dev.users=op001:op001:OPERATOR:王小明,op002:op002:OPERATOR:李大華,dep001:dep001:DEPUTY:陳副科,chief001:chief001:CHIEF:林科長,super:super:OPERATOR|DEPUTY|CHIEF:多角色測試

@@ -1,0 +1,27 @@
+# build output
+target/
+tcboplog/target/
+*.war
+*.class
+
+# exported docker images (too large for git; rebuild with `docker build`)
+dist/*.tar.gz
+
+# local databases / runtime data
+data/
+tcboplog/data/
+*.mv.db
+*.trace.db
+*.lock.db
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.claude/
+.bob/
+
+# real configuration with secrets never goes to git (keep the .sample)
+# tcboplog/config/app.properties is intentionally committed (bypass mode, no secrets)
+config/app.properties
