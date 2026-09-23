@@ -24,7 +24,7 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (SessionUtil.principal(req) != null) {
-            resp.sendRedirect(req.getContextPath() + "/");
+            redirect(resp, contextUrl(req, "/"));
             return;
         }
         AppConfig cfg = AppConfig.get();
@@ -33,7 +33,7 @@ public class LoginServlet extends HttpServlet {
                 && req.getParameter("error") == null) {
             try {
                 establish(req, AuthService.login(cfg.bypassAutoLogin(), "", null, null, SessionUtil.clientIp(req)));
-                resp.sendRedirect(req.getContextPath() + "/");
+                redirect(resp, contextUrl(req, "/"));
                 return;
             } catch (AuthException e) {
                 req.setAttribute("error", Html.esc(e.getMessage()));
@@ -60,12 +60,25 @@ public class LoginServlet extends HttpServlet {
         try {
             UserPrincipal p = AuthService.login(username, password, role, shift, ip);
             establish(req, p);
-            resp.sendRedirect(req.getContextPath() + "/");
+            redirect(resp, contextUrl(req, "/"));
         } catch (AuthException e) {
             LOG.warning("Login failed for '" + username + "' from " + ip + ": " + e.getMessage());
             AuditDao.record(username == null ? "?" : username, null, ip, "LOGIN_FAIL", null, e.getMessage());
-            resp.sendRedirect(req.getContextPath() + "/login?error=" + URLEncoder.encode(e.getMessage(), "UTF-8"));
+            redirect(resp, contextUrl(req, "/login?error=" + URLEncoder.encode(e.getMessage(), "UTF-8")));
         }
+    }
+
+    private static void redirect(HttpServletResponse resp, String location) {
+        resp.setStatus(HttpServletResponse.SC_FOUND);
+        resp.setHeader("Location", location);
+    }
+
+    private static String contextUrl(HttpServletRequest req, String path) {
+        String contextPath = req.getContextPath();
+        if (contextPath == null || contextPath.length() == 0 || "/".equals(contextPath)) {
+            return path;
+        }
+        return contextPath + path;
     }
 
     /** Replaces any existing session (fixation protection), stores the principal and audits the login. */
