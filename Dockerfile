@@ -32,7 +32,6 @@ COPY --from=build /src/tcboplog/target/tcboplog.war /app/tcboplog.war
 COPY tcboplog/config/app.properties /app/config/app.properties
 RUN mkdir -p /data /app/fonts && useradd -r -u 10001 tcboplog && chown -R tcboplog:tcboplog /app /data
 USER tcboplog
-VOLUME ["/data"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \
   CMD curl -fs http://localhost:8080/login >/dev/null || exit 1
